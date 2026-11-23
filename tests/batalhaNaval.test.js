@@ -170,6 +170,48 @@ describe('Posicionamento aleatorio', () => {
     tabuleiro.posicionarAleatoriamente();
     expect(posicoesOcupadas(tabuleiro)).toHaveLength(14);
   });
+
+  // Texto com o tipo de navio de cada casa ocupada: serve para comparar disposicoes.
+  function disposicao(tabuleiro) {
+    return posicoesOcupadas(tabuleiro)
+      .map(([l, c]) => `${l},${c}=${tabuleiro.celula(l, c).navio}`)
+      .join(';');
+  }
+
+  function disposicaoDaSemente(semente) {
+    const tabuleiro = new Tabuleiro();
+    tabuleiro.posicionarAleatoriamente(aleatorioComSemente(semente));
+    return disposicao(tabuleiro);
+  }
+
+  test('com 200 sementes a frota sempre fica completa, sem sobreposicao e com navios em linha reta', () => {
+    for (let semente = 1; semente <= 200; semente++) {
+      const tabuleiro = new Tabuleiro();
+      tabuleiro.posicionarAleatoriamente(aleatorioComSemente(semente));
+
+      expect(tabuleiro.frotaCompleta()).toBe(true);
+      expect(posicoesOcupadas(tabuleiro)).toHaveLength(14);
+      Object.entries(FROTA).forEach(([tipo, tamanho]) => {
+        const casas = posicoesOcupadas(tabuleiro).filter(([l, c]) => tabuleiro.celula(l, c).navio === tipo);
+        expect(casas).toHaveLength(tamanho);
+        const linhas = new Set(casas.map(([l]) => l));
+        const colunas = new Set(casas.map(([, c]) => c));
+        // todas as casas na mesma linha ou na mesma coluna, e consecutivas
+        expect(linhas.size === 1 || colunas.size === 1).toBe(true);
+        const variavel = linhas.size === 1 ? casas.map(([, c]) => c) : casas.map(([l]) => l);
+        expect(Math.max(...variavel) - Math.min(...variavel)).toBe(tamanho - 1);
+      });
+    }
+  });
+
+  test('a mesma semente gera a mesma disposicao e sementes diferentes geram disposicoes diferentes', () => {
+    expect(disposicaoDaSemente(42)).toBe(disposicaoDaSemente(42));
+    expect(disposicaoDaSemente(1)).not.toBe(disposicaoDaSemente(2));
+
+    const distintas = new Set();
+    for (let semente = 1; semente <= 200; semente++) distintas.add(disposicaoDaSemente(semente));
+    expect(distintas.size).toBe(200);
+  });
 });
 
 describe('Tiros', () => {
